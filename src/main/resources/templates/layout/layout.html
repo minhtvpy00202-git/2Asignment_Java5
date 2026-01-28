@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ASM Java 5</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <link rel="stylesheet" th:href="@{/css/pages.css}">
+    <script th:src="@{/js/app.js}" defer></script>
+</head>
+<body>
+<div th:fragment="header">
+<header class="site-header">
+    <div class="topbar">
+        <div class="container topbar-inner">
+            <div class="topbar-left">Hotline: 0901 234 567 (8:30 - 21:30)</div>
+            <div class="topbar-links">
+                <a th:href="@{/home/index}">Liên hệ</a>
+                <a th:href="@{/home/index}">Thông báo</a>
+            </div>
+        </div>
+    </div>
+    <div class="container header-inner">
+        <div class="brand">
+            <a class="brand-logo" th:href="@{/home/index}">
+                <img class="brand-image" th:src="@{/images/logo.png}" alt="ASM Java 5 Shop">
+            </a>
+        </div>
+        <nav class="main-nav">
+            <a th:href="@{/home/index}">Trang chủ</a>
+            <a th:href="@{/product/list}">Sản phẩm</a>
+            <div class="nav-dropdown nav-categories">
+                <button class="nav-label" type="button">Loại</button>
+                <div class="dropdown-menu mega-menu">
+                    <div class="mega-grid">
+                        <div>
+                            <div class="mega-title">Danh mục nổi bật</div>
+                            <div class="mega-categories">
+                                <a th:each="c : ${navCategories}"
+                                   th:href="@{|/product/list-by-category/${c.id}|}"
+                                   th:text="${c.name}">Danh mục</a>
+                            </div>
+                        </div>
+                        <div class="mega-promo">
+                            <div class="mega-title">Ưu đãi hôm nay</div>
+                            <p>Miễn phí vận chuyển đơn từ 500.000đ.</p>
+                            <a class="btn btn-outline" th:href="@{/product/list}">Xem sản phẩm</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <a th:href="@{/order/list}">Đơn hàng</a>
+            <a th:if="${isAdmin}" th:href="@{/admin/category/index}">Quản trị</a>
+            <a th:if="${session.USER == null}" th:href="@{/auth/login}">Đăng nhập</a>
+            <a th:if="${session.USER == null}" th:href="@{/account/sign-up}">Đăng ký</a>
+        </nav>
+        <form class="header-search" th:action="@{/product/list}" method="get">
+            <input type="text" name="keyword" placeholder="Tìm sản phẩm hoặc danh mục..."
+                   th:value="${param.keyword}" />
+            <button type="submit" class="btn btn-outline" aria-label="Tìm kiếm">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"></circle>
+                    <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
+                </svg>
+            </button>
+        </form>
+        <a class="cart-nav-link" th:href="@{/cart/index}" aria-label="Giỏ hàng">
+            <svg class="cart-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 4h-2l-1 2h2l3.6 7.59-1.35 2.44A2 2 0 0 0 9 19h9v-2H9.42a.25.25 0 0 1-.22-.37l.9-1.63h5.6a2 2 0 0 0 1.8-1.1l3.1-6.2A1 1 0 0 0 19.7 6H6.2l-.8-2zM7 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+            </svg>
+            <span class="cart-nav-badge"
+                  th:text="${cartDistinctCount}"
+                  th:style="${cartDistinctCount > 0} ? '' : 'display:none;'">0</span>
+        </a>
+        <div class="nav-dropdown notification-dropdown" th:if="${session.USER != null}">
+            <button class="notification-btn" type="button" aria-label="Thông báo">
+                <svg class="notification-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 22a2.2 2.2 0 0 0 2.2-2.2h-4.4A2.2 2.2 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.2-6.7V3a1.8 1.8 0 0 0-3.6 0v1.3A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z"/>
+                </svg>
+                <span class="notification-badge"
+                      th:if="${unreadNotificationCount > 0}"
+                      th:text="${unreadNotificationCount}">0</span>
+            </button>
+            <div class="dropdown-menu notification-menu">
+                <div class="notification-header">Thông báo</div>
+                <div class="notification-empty" th:if="${#lists.isEmpty(latestNotifications)}">
+                    Không có thông báo mới
+                </div>
+                <a class="notification-item"
+                   th:each="n : ${latestNotifications}"
+                   th:href="@{|/notifications/read/${n.id}|}"
+                   th:classappend="${n.read == false} ? 'unread'">
+                    <span class="notification-dot" th:if="${n.read == false}"></span>
+                    <div class="notification-body">
+                        <div class="notification-title" th:text="${n.title}">Thông báo</div>
+                        <div class="notification-content" th:text="${n.content}">Nội dung</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div class="nav-dropdown nav-account" th:if="${session.USER != null}">
+            <button class="nav-label user-icon-btn" type="button" aria-label="Tài khoản">
+                <img class="user-avatar"
+                     th:if="${session.USER.photo != null and !#strings.isEmpty(session.USER.photo)}"
+                     th:src="@{|/images/${session.USER.photo}|}"
+                     alt="Avatar"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <span class="user-icon-fallback"
+                      th:if="${session.USER.photo != null and !#strings.isEmpty(session.USER.photo)}"
+                      style="display:none;">
+                    <svg class="user-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 12c2.761 0 5-2.462 5-5.5S14.761 1 12 1 7 3.462 7 6.5 9.239 12 12 12zm0 2c-4.418 0-8 2.686-8 6v3h16v-3c0-3.314-3.582-6-8-6z"/>
+                    </svg>
+                </span>
+                <svg class="user-icon" th:if="${session.USER.photo == null or #strings.isEmpty(session.USER.photo)}"
+                     viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 12c2.761 0 5-2.462 5-5.5S14.761 1 12 1 7 3.462 7 6.5 9.239 12 12 12zm0 2c-4.418 0-8 2.686-8 6v3h16v-3c0-3.314-3.582-6-8-6z"/>
+                </svg>
+            </button>
+            <div class="dropdown-menu">
+                <a th:href="@{/account/edit-profile}">Tài khoản</a>
+                <a th:href="@{/auth/logout}">Đăng xuất</a>
+            </div>
+        </div>
+        <button class="mobile-menu-toggle" type="button" aria-label="Mở menu" aria-expanded="false">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"></path>
+            </svg>
+        </button>
+    </div>
+</header>
+
+<div class="mobile-menu-backdrop" aria-hidden="true"></div>
+<aside class="mobile-menu" aria-label="Menu mobile">
+    <div class="mobile-menu-header">Menu</div>
+    <nav class="mobile-menu-nav">
+        <a th:href="@{/home/index}">Trang chủ</a>
+        <a th:href="@{/product/list}">Sản phẩm</a>
+        <button class="mobile-menu-toggle-btn" type="button" aria-expanded="false">Danh mục</button>
+        <div class="mobile-menu-section">
+            <a th:each="c : ${navCategories}"
+               th:href="@{|/product/list-by-category/${c.id}|}"
+               th:text="${c.name}">Danh mục</a>
+        </div>
+        <a th:href="@{/order/list}">Đơn hàng</a>
+        <a th:if="${isAdmin}" th:href="@{/admin/category/index}">Quản trị</a>
+        <a th:if="${session.USER == null}" th:href="@{/auth/login}">Đăng nhập</a>
+        <a th:if="${session.USER == null}" th:href="@{/account/sign-up}">Đăng ký</a>
+        <a th:if="${session.USER != null}" th:href="@{/account/edit-profile}">Tài khoản</a>
+        <a th:if="${session.USER != null}" th:href="@{/auth/logout}">Đăng xuất</a>
+    </nav>
+</aside>
+</div>
+
+<footer th:fragment="footer" class="site-footer">
+    <div class="container footer-inner">
+        <div class="footer-brand">
+            <img class="footer-logo" th:src="@{/images/logo.png}" alt="ASM Java 5 Shop">
+            <p>Thời trang hiện đại, chất lượng đảm bảo và dịch vụ tận tâm cho mọi khách hàng.</p>
+            <div class="footer-social">
+                <a href="#" aria-label="Facebook">Fb</a>
+                <a href="#" aria-label="Instagram">Ig</a>
+                <a href="#" aria-label="TikTok">Tt</a>
+            </div>
+        </div>
+        <div class="footer-col">
+            <h4>Liên kết</h4>
+            <div class="footer-links">
+                <a th:href="@{/home/index}">Trang chủ</a>
+                <a th:href="@{/product/list}">Sản phẩm</a>
+                <a th:href="@{/cart/index}">Giỏ hàng</a>
+                <a th:href="@{/order/list}">Đơn hàng</a>
+            </div>
+        </div>
+        <div class="footer-col">
+            <h4>Hỗ trợ</h4>
+            <div class="footer-links">
+                <a th:href="@{/account/forgot-password}">Quên mật khẩu</a>
+                <a th:href="@{/account/change-password}">Đổi mật khẩu</a>
+                <a th:href="@{/account/edit-profile}">Tài khoản</a>
+            </div>
+        </div>
+        <div class="footer-col">
+            <h4>Liên hệ</h4>
+            <div class="footer-contact">
+                <div>Email: support@asmjava5.shop</div>
+                <div>Hotline: 0901 234 567</div>
+                <div>Địa chỉ: 123 Nguyễn Huệ, TP.HCM</div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        © 2026 ASM Java 5 Shop. All rights reserved.
+    </div>
+    <script th:src="@{/js/app.js}" defer></script>
+</footer>
+</body>
+</html>

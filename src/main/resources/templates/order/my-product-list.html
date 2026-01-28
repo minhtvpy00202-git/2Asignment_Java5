@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sản phẩm đã mua</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <link rel="stylesheet" th:href="@{/css/pages.css}">
+</head>
+<body>
+<div th:replace="layout/layout :: header"></div>
+
+<main class="container" style="padding: 16px;">
+    <h3 class="page-title">Sản phẩm đã mua</h3>
+
+    <div class="card">
+        <table>
+            <thead>
+            <tr>
+                <th>Sản phẩm</th>
+                <th>Giá</th>
+                <th>Số lượng</th>
+                <th>Size</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="d : ${details}">
+                <td th:text="${d.product.name}">Tên sản phẩm</td>
+                <td th:text="${#numbers.formatDecimal(d.price, 0, 'POINT', 0, 'COMMA')} + ' VNĐ'">0</td>
+                <td th:text="${d.quantity}">1</td>
+                <td th:text="${d.sizeName}">M</td>
+                <td>
+                    <a class="btn btn-outline" th:href="@{|/cart/add/${d.product.id}?sizeId=${d.sizeId}|}">Mua lại</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="layout/layout :: footer"></div>
+</body>
+</html>
