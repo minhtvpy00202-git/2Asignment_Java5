@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Báo cáo - Khách VIP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <link rel="stylesheet" th:href="@{/css/pages.css}">
+</head>
+<body>
+<div th:replace="layout/layout :: header"></div>
+
+<main class="container" style="padding: 16px;">
+    <h3 class="page-title">Top 10 khách hàng VIP</h3>
+    <nav class="admin-nav">
+        <a th:href="@{/admin/category/index}">Danh mục</a>
+        <a th:href="@{/admin/product/index}">Sản phẩm</a>
+        <a th:href="@{/admin/account/index}">Tài khoản</a>
+        <a th:href="@{/admin/order/index}">Đơn hàng</a>
+        <a th:href="@{/admin/report/revenue}">Doanh thu</a>
+        <a th:href="@{/admin/report/vip}">Khách hàng VIP</a>
+    </nav>
+
+    <table>
+        <thead>
+        <tr>
+            <th>Họ tên</th>
+            <th>Tổng tiền</th>
+            <th>Ngày mua đầu</th>
+            <th>Ngày mua cuối</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="v : ${items}">
+            <td th:text="${v.fullname}">Ten</td>
+            <td th:text="${#numbers.formatDecimal(v.totalAmount, 0, 'POINT', 0, 'COMMA')} + ' VNĐ'">0</td>
+            <td th:text="${v.firstOrderDate}">date</td>
+            <td th:text="${v.lastOrderDate}">date</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div th:replace="layout/layout :: footer"></div>
+</body>
+</html>

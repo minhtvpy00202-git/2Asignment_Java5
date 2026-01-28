@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Báo cáo - Doanh thu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <link rel="stylesheet" th:href="@{/css/pages.css}">
+</head>
+<body>
+<div th:replace="layout/layout :: header"></div>
+
+<main class="container" style="padding: 16px;">
+    <h3 class="page-title">Doanh thu theo đơn hàng</h3>
+    <nav class="admin-nav">
+        <a th:href="@{/admin/category/index}">Danh mục</a>
+        <a th:href="@{/admin/product/index}">Sản phẩm</a>
+        <a th:href="@{/admin/account/index}">Tài khoản</a>
+        <a th:href="@{/admin/order/index}">Đơn hàng</a>
+        <a th:href="@{/admin/report/revenue}">Doanh thu</a>
+        <a th:href="@{/admin/report/vip}">Khách hàng VIP</a>
+    </nav>
+
+    <div class="admin-content">
+        <div class="revenue-title">BẢNG DOANH THU BÁN HÀNG</div>
+        <form class="card revenue-filter" th:action="@{/admin/report/revenue}" method="get" id="revenueFilterForm">
+            <div class="form-group">
+                <label>Từ ngày</label>
+                <input type="date" name="fromDate" th:value="${fromDate}" id="fromDateInput">
+            </div>
+            <div class="form-group">
+                <label>Đến ngày</label>
+                <input type="date" name="toDate" th:value="${toDate}" id="toDateInput">
+            </div>
+            <input type="hidden" name="sortField" th:value="${sortField}" id="sortFieldInput">
+            <input type="hidden" name="sortDir" th:value="${sortDir}" id="sortDirInput">
+            <div class="table-actions">
+                <button class="btn" type="submit">Lọc</button>
+                <a class="btn btn-outline" th:href="@{/admin/report/revenue}">Xoá lọc</a>
+            </div>
+        </form>
+
+        <table class="revenue-table">
+        <thead>
+        <tr>
+            <th>STT</th>
+            <th>
+                <a class="revenue-sort" data-field="orderId"
+                   th:href="@{/admin/report/revenue(fromDate=${fromDate},toDate=${toDate},sortField='orderId',sortDir=${sortField == 'orderId' and sortDir == 'asc' ? 'desc' : 'asc'})}">
+                    <span class="sort-label">Mã đơn hàng</span>
+                    <span class="sort-arrow" th:text="${sortField == 'orderId' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                </a>
+            </th>
+            <th>
+                <a class="revenue-sort" data-field="productName"
+                   th:href="@{/admin/report/revenue(fromDate=${fromDate},toDate=${toDate},sortField='productName',sortDir=${sortField == 'productName' and sortDir == 'asc' ? 'desc' : 'asc'})}">
+                    <span class="sort-label">Tên sản phẩm</span>
+                    <span class="sort-arrow" th:text="${sortField == 'productName' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                </a>
+            </th>
+            <th>
+                <a class="revenue-sort" data-field="quantity"
+                   th:href="@{/admin/report/revenue(fromDate=${fromDate},toDate=${toDate},sortField='quantity',sortDir=${sortField == 'quantity' and sortDir == 'asc' ? 'desc' : 'asc'})}">
+                    <span class="sort-label">Số lượng</span>
+                    <span class="sort-arrow" th:text="${sortField == 'quantity' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                </a>
+            </th>
+            <th>
+                <a class="revenue-sort" data-field="unitPrice"
+                   th:href="@{/admin/report/revenue(fromDate=${fromDate},toDate=${toDate},sortField='unitPrice',sortDir=${sortField == 'unitPrice' and sortDir == 'asc' ? 'desc' : 'asc'})}">
+                    <span class="sort-label">Đơn giá</span>
+                    <span class="sort-arrow" th:text="${sortField == 'unitPrice' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                </a>
+            </th>
+            <th>
+                <a class="revenue-sort" data-field="discountAmount"
+                   th:href="@{/admin/report/revenue(fromDate=${fromDate},toDate=${toDate},sortField='discountAmount',sortDir=${sortField == 'discountAmount' and sortDir == 'asc' ? 'desc' : 'asc'})}">
+                    <span class="sort-label">Giảm giá</span>
+                    <span class="sort-arrow" th:text="${sortField == 'discountAmount' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                </a>
+            </th>
+            <th>
+                <a class="revenue-sort" data-field="lineTotal"
+                   th:href="@{/admin/report/revenue(fromDate=${fromDate},toDate=${toDate},sortField='lineTotal',sortDir=${sortField == 'lineTotal' and sortDir == 'asc' ? 'desc' : 'asc'})}">
+                    <span class="sort-label">Thành tiền</span>
+                    <span class="sort-arrow" th:text="${sortField == 'lineTotal' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                </a>
+            </th>
+        </tr>
+        </thead>
+        <tbody id="revenueTbody">
+        <tr th:each="r,stat : ${rows}"
+            th:classappend="${stat.index % 2 == 0} ? 'row-even' : 'row-odd'">
+            <td th:text="${stat.index + 1}" class="cell-center">1</td>
+            <td th:text="${'#' + r.orderId}" class="cell-center">#123</td>
+            <td th:text="${r.productName}">Tên sản phẩm</td>
+            <td th:text="${r.quantity}" class="cell-center">1</td>
+            <td th:text="${#numbers.formatDecimal(r.unitPrice, 0, 'POINT', 0, 'COMMA')}" class="cell-center">0</td>
+            <td th:text="${#numbers.formatDecimal(r.discountAmount, 0, 'POINT', 0, 'COMMA')}" class="cell-center">0</td>
+            <td th:text="${#numbers.formatDecimal(r.lineTotal, 0, 'POINT', 0, 'COMMA')}" class="cell-center">0</td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr class="revenue-total-row">
+            <td colspan="6" class="total-label">Tổng</td>
+            <td class="total-value" id="revenueTotalCell" th:text="${#numbers.formatDecimal(grandTotal, 0, 'POINT', 0, 'COMMA')}">0</td>
+        </tr>
+        </tfoot>
+        </table>
+    </div>
+</main>
+
+<div th:replace="layout/layout :: footer"></div>
+<script>
+    (function () {
+        const tbody = document.getElementById('revenueTbody');
+        const totalCell = document.getElementById('revenueTotalCell');
+        const form = document.getElementById('revenueFilterForm');
+        const fromInput = document.getElementById('fromDateInput');
+        const toInput = document.getElementById('toDateInput');
+        const sortFieldInput = document.getElementById('sortFieldInput');
+        const sortDirInput = document.getElementById('sortDirInput');
+        const sortLinks = Array.from(document.querySelectorAll('.revenue-sort'));
+
+        if (!tbody || !totalCell || !form || !sortFieldInput || !sortDirInput) {
+            return;
+        }
+
+        function numberFormat(value) {
+            const num = Number(value || 0);
+            return num.toLocaleString('vi-VN');
+        }
+
+        function updateArrows(field, dir) {
+            sortLinks.forEach(link => {
+                const arrow = link.querySelector('.sort-arrow');
+                if (!arrow) {
+                    return;
+                }
+                const isActive = link.dataset.field === field;
+                arrow.textContent = isActive ? (dir === 'asc' ? '▲' : '▼') : '↕';
+            });
+        }
+
+        function renderRows(rows) {
+            tbody.innerHTML = '';
+            rows.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'row-even' : 'row-odd';
+
+                const tdIndex = document.createElement('td');
+                tdIndex.className = 'cell-center';
+                tdIndex.textContent = index + 1;
+                tr.appendChild(tdIndex);
+
+                const tdOrder = document.createElement('td');
+                tdOrder.className = 'cell-center';
+                tdOrder.textContent = `#${row.orderId}`;
+                tr.appendChild(tdOrder);
+
+                const tdName = document.createElement('td');
+                tdName.textContent = row.productName || '';
+                tr.appendChild(tdName);
+
+                const tdQty = document.createElement('td');
+                tdQty.className = 'cell-center';
+                tdQty.textContent = row.quantity || 0;
+                tr.appendChild(tdQty);
+
+                const tdUnit = document.createElement('td');
+                tdUnit.className = 'cell-center';
+                tdUnit.textContent = numberFormat(row.unitPrice);
+                tr.appendChild(tdUnit);
+
+                const tdDiscount = document.createElement('td');
+                tdDiscount.className = 'cell-center';
+                tdDiscount.textContent = numberFormat(row.discountAmount);
+                tr.appendChild(tdDiscount);
+
+                const tdLine = document.createElement('td');
+                tdLine.className = 'cell-center';
+                tdLine.textContent = numberFormat(row.lineTotal);
+                tr.appendChild(tdLine);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function fetchRevenueData(field, dir) {
+            const params = new URLSearchParams();
+            if (fromInput && fromInput.value) {
+                params.set('fromDate', fromInput.value);
+            }
+            if (toInput && toInput.value) {
+                params.set('toDate', toInput.value);
+            }
+            params.set('sortField', field);
+            params.set('sortDir', dir);
+
+            return fetch(`/admin/report/revenue/data?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    renderRows(data.rows || []);
+                    totalCell.textContent = numberFormat(data.grandTotal);
+                    sortFieldInput.value = data.sortField || field;
+                    sortDirInput.value = data.sortDir || dir;
+                    updateArrows(sortFieldInput.value, sortDirInput.value);
+                    const url = `/admin/report/revenue?${params.toString()}`;
+                    window.history.replaceState({}, '', url);
+                });
+        }
+
+        sortLinks.forEach(link => {
+            link.addEventListener('click', function (event) {
+                event.preventDefault();
+                const field = link.dataset.field || 'orderId';
+                const currentField = sortFieldInput.value || 'orderId';
+                const currentDir = sortDirInput.value || 'asc';
+                const nextDir = field === currentField && currentDir === 'asc' ? 'desc' : 'asc';
+                fetchRevenueData(field, nextDir);
+            });
+        });
+    })();
+</script>
+</body>
+</html>
