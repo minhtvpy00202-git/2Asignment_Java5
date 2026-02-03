@@ -11,6 +11,7 @@
     <link rel="stylesheet" th:href="@{/css/layout.css}">
     <link rel="stylesheet" th:href="@{/css/components.css}">
     <link rel="stylesheet" th:href="@{/css/pages.css}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
 <div th:replace="layout/layout :: header"></div>
@@ -47,15 +48,450 @@
         <div>Tổng tiền: <strong th:text="${#numbers.formatDecimal(totalPrice, 0, 'POINT', 0, 'COMMA')} + ' VNĐ'">0</strong></div>
     </div>
 
-    <form th:action="@{/order/checkout}" method="post" class="card" style="margin-top: 16px;">
+    <form th:action="@{/order/checkout}" method="post" class="card" style="margin-top: 16px;" id="checkoutForm">
+        <input type="hidden" name="address" id="shipping_address">
+        <input type="hidden" name="lat" id="shipping_lat">
+        <input type="hidden" name="lng" id="shipping_lng">
         <div class="form-group">
-            <label>Địa chỉ giao hàng</label>
-            <input type="text" name="address" required
-                   placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố">
+            <label>Tỉnh / Thành phố</label>
+            <select id="provinceSelect" required>
+                <option value="">Chọn tỉnh/thành phố</option>
+            </select>
         </div>
+        <div class="form-group">
+            <label>Phường / Xã</label>
+            <select id="wardSelect" required>
+                <option value="">Chọn phường/xã</option>
+            </select>
+        </div>
+        <div style="height: 320px; border-radius: 12px; overflow: hidden; border: 1px solid #e6e6e6;" id="checkoutMap"></div>
         <button class="btn" type="submit">Đặt hàng ngay</button>
     </form>
 </main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('checkoutForm');
+        const provinceSelect = document.getElementById('provinceSelect');
+        const wardSelect = document.getElementById('wardSelect');
+        const shippingAddress = document.getElementById('shipping_address');
+        const shippingLat = document.getElementById('shipping_lat');
+        const shippingLng = document.getElementById('shipping_lng');
+        const mapEl = document.getElementById('checkoutMap');
+
+        const addressData = {
+  'Gia Lai': [
+    // Quy Nhơn
+    'Phường Quy Nhơn',
+    'Phường Quy Nhơn Đông',
+    'Phường Quy Nhơn Tây',
+    'Phường Quy Nhơn Nam',
+    'Phường Quy Nhơn Bắc',
+    'Xã Nhơn Châu',
+
+    // An Nhơn
+    'Phường Bình Định',
+    'Phường An Nhơn',
+    'Phường An Nhơn Đông',
+    'Xã An Nhơn Tây',
+    'Phường An Nhơn Nam',
+    'Phường An Nhơn Bắc',
+
+    // Hoài Nhơn
+    'Phường Bồng Sơn',
+    'Phường Hoài Nhơn',
+    'Phường Tam Quan',
+    'Phường Hoài Nhơn Đông',
+    'Phường Hoài Nhơn Tây',
+    'Phường Hoài Nhơn Nam',
+    'Phường Hoài Nhơn Bắc',
+
+    // Phù Cát
+    'Xã Phù Cát',
+    'Xã Xuân An',
+    'Xã Ngô Mây',
+    'Xã Cát Tiến',
+    'Xã Đề Gi',
+    'Xã Hòa Hội',
+    'Xã Hội Sơn',
+
+    // Phù Mỹ
+    'Xã Phù Mỹ',
+    'Xã An Lương',
+    'Xã Bình Dương',
+    'Xã Phù Mỹ Đông',
+    'Xã Phù Mỹ Tây',
+    'Xã Phù Mỹ Nam',
+    'Xã Phù Mỹ Bắc',
+
+    // Tuy Phước
+    'Xã Tuy Phước',
+    'Xã Tuy Phước Đông',
+    'Xã Tuy Phước Tây',
+    'Xã Tuy Phước Bắc',
+
+    // Tây Sơn
+    'Xã Tây Sơn',
+    'Xã Bình Khê',
+    'Xã Bình Phú',
+    'Xã Bình Hiệp',
+    'Xã Bình An',
+
+    // Hoài Ân
+    'Xã Hoài Ân',
+    'Xã Ân Tường',
+    'Xã Kim Sơn',
+    'Xã Vạn Đức',
+    'Xã Ân Hảo',
+
+    // Vân Canh
+    'Xã Vân Canh',
+    'Xã Canh Vinh',
+    'Xã Canh Liên',
+
+    // Vĩnh Thạnh
+    'Xã Vĩnh Thạnh',
+    'Xã Vĩnh Thịnh',
+    'Xã Vĩnh Quang',
+    'Xã Vĩnh Sơn',
+
+    // An Lão
+    'Xã An Lão',
+    'Xã An Hòa',
+    'Xã An Vinh',
+    'Xã An Toàn'
+  ]
+};
+
+
+
+
+        function resetSelect(selectEl, placeholder) {
+            selectEl.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = placeholder;
+            selectEl.appendChild(opt);
+        }
+
+        function populateSelect(selectEl, items) {
+            items.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function loadProvinces() {
+            resetSelect(provinceSelect, 'Chọn tỉnh/thành phố');
+            populateSelect(provinceSelect, Object.keys(addressData));
+        }
+
+        function loadWards() {
+            resetSelect(wardSelect, 'Chọn phường/xã');
+            const province = provinceSelect.value;
+            if (!province || !addressData[province]) {
+                return;
+            }
+            populateSelect(wardSelect, addressData[province]);
+        }
+
+        provinceSelect.addEventListener('change', loadWards);
+
+        let map = null;
+        let marker = null;
+        let geocodeTimer = null;
+        let lastGeocodeQuery = '';
+        let geocodeAbort = null;
+        let geocodeMessageEl = null;
+
+        form.addEventListener('submit', (event) => {
+            const province = provinceSelect.value;
+            const ward = wardSelect.value;
+            if (!province || !ward) {
+                event.preventDefault();
+                return;
+            }
+            if (!shippingLat.value || !shippingLng.value) {
+                event.preventDefault();
+                showGeocodeError('Vui lòng chọn vị trí trên bản đồ.');
+                return;
+            }
+            shippingAddress.value = `${ward}, ${province}||${shippingLat.value},${shippingLng.value}`;
+        });
+
+        loadProvinces();
+
+        if (mapEl && window.L) {
+            const defaultLat = 10.7769;
+            const defaultLng = 106.7009;
+            map = L.map(mapEl).setView([defaultLat, defaultLng], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+            geocodeMessageEl = document.createElement('div');
+            geocodeMessageEl.className = 'status-message status-error';
+            geocodeMessageEl.style.display = 'none';
+            mapEl.insertAdjacentElement('afterend', geocodeMessageEl);
+            map.on('click', (event) => {
+                const { lat, lng } = event.latlng;
+                if (marker) {
+                    marker.setLatLng([lat, lng]);
+                } else {
+                    marker = L.marker([lat, lng]).addTo(map);
+                }
+                shippingLat.value = lat.toFixed(6);
+                shippingLng.value = lng.toFixed(6);
+                if (geocodeMessageEl) {
+                    geocodeMessageEl.style.display = 'none';
+                    geocodeMessageEl.textContent = '';
+                }
+            });
+        }
+
+        function normalizeLocationName(value) {
+            if (!value) {
+                return '';
+            }
+            return value
+                .replace(/^(TP\.|Thành phố|TX\.|Thị xã|Thị trấn|Phường|Xã)\s*/i, '')
+                .trim();
+        }
+
+        function buildAddressQuery() {
+            const province = provinceSelect.value;
+            const ward = wardSelect.value;
+            if (!province || !ward) {
+                return '';
+            }
+            const parts = [];
+            parts.push(ward);
+            parts.push(province);
+            parts.push('Việt Nam');
+            return parts.join(', ');
+        }
+
+        function buildNormalizedQuery() {
+            const province = provinceSelect.value;
+            const ward = normalizeLocationName(wardSelect.value);
+            if (!province || !ward) {
+                return '';
+            }
+            const parts = [];
+            parts.push(ward);
+            parts.push(province);
+            parts.push('Việt Nam');
+            return parts.join(', ');
+        }
+
+        function buildWardProvinceQuery() {
+            const province = provinceSelect.value;
+            const ward = wardSelect.value;
+            if (!province || !ward) {
+                return '';
+            }
+            return `${ward}, ${province}, Việt Nam`;
+        }
+
+        function buildNormalizedWardProvinceQuery() {
+            const province = provinceSelect.value;
+            const ward = normalizeLocationName(wardSelect.value);
+            if (!province || !ward) {
+                return '';
+            }
+            return `${ward}, ${province}, Việt Nam`;
+        }
+
+        function buildGeocodeUrl(query) {
+            const province = provinceSelect.value;
+            const ward = normalizeLocationName(wardSelect.value);
+            const params = new URLSearchParams();
+            params.set('format', 'jsonv2');
+            params.set('limit', '1');
+            params.set('countrycodes', 'vn');
+            params.set('addressdetails', '1');
+            params.set('accept-language', 'vi');
+            params.set('email', 'demo@local.test');
+            if (ward) {
+                params.set('suburb', ward);
+            }
+            params.set('state', province);
+            params.set('country', 'Vietnam');
+            params.set('q', query);
+            return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+        }
+
+        function buildSimpleGeocodeUrl(query) {
+            const params = new URLSearchParams();
+            params.set('format', 'jsonv2');
+            params.set('limit', '1');
+            params.set('countrycodes', 'vn');
+            params.set('accept-language', 'vi');
+            params.set('email', 'demo@local.test');
+            params.set('q', query);
+            return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+        }
+
+        function buildJsonpUrl(query) {
+            const params = new URLSearchParams();
+            params.set('format', 'json');
+            params.set('limit', '1');
+            params.set('countrycodes', 'vn');
+            params.set('accept-language', 'vi');
+            params.set('email', 'demo@local.test');
+            params.set('q', query);
+            return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+        }
+
+        function jsonpFetch(url) {
+            return new Promise((resolve, reject) => {
+                const callbackName = `__nominatim_cb_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                const script = document.createElement('script');
+                const cleanup = () => {
+                    if (script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                    delete window[callbackName];
+                };
+                window[callbackName] = (data) => {
+                    cleanup();
+                    resolve(data);
+                };
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error('jsonp_failed'));
+                };
+                const separator = url.includes('?') ? '&' : '?';
+                script.src = `${url}${separator}json_callback=${callbackName}`;
+                document.body.appendChild(script);
+            });
+        }
+
+        function updateMarker(lat, lng) {
+            if (!map || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+                return;
+            }
+            map.setView([lat, lng], 16);
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng]).addTo(map);
+            }
+            shippingLat.value = lat.toFixed(6);
+            shippingLng.value = lng.toFixed(6);
+            if (geocodeMessageEl) {
+                geocodeMessageEl.style.display = 'none';
+                geocodeMessageEl.textContent = '';
+            }
+        }
+
+        function showGeocodeError(message) {
+            if (!geocodeMessageEl) {
+                return;
+            }
+            geocodeMessageEl.textContent = message;
+            geocodeMessageEl.style.display = 'block';
+        }
+
+        function uniqueQueries(queries) {
+            const result = [];
+            const seen = new Set();
+            queries.forEach(query => {
+                if (!query || seen.has(query)) {
+                    return;
+                }
+                seen.add(query);
+                result.push(query);
+            });
+            return result;
+        }
+
+        function scheduleGeocode() {
+            const query = buildAddressQuery();
+            if (!query || !map) {
+                if (geocodeMessageEl) {
+                    geocodeMessageEl.style.display = 'none';
+                    geocodeMessageEl.textContent = '';
+                }
+                return;
+            }
+            const queryKey = `${provinceSelect.value}|${wardSelect.value}`;
+            if (queryKey === lastGeocodeQuery) {
+                return;
+            }
+            if (geocodeTimer) {
+                clearTimeout(geocodeTimer);
+            }
+            geocodeTimer = setTimeout(() => {
+                lastGeocodeQuery = queryKey;
+                if (geocodeAbort) {
+                    geocodeAbort.abort();
+                }
+                geocodeAbort = new AbortController();
+                const queries = uniqueQueries([
+                    buildAddressQuery(),
+                    buildNormalizedQuery(),
+                    buildWardProvinceQuery(),
+                    buildNormalizedWardProvinceQuery()
+                ]);
+                if (!queries.length) {
+                    return;
+                }
+                const fetchUrls = [];
+                const jsonpUrls = [];
+                queries.forEach(item => {
+                    fetchUrls.push(buildGeocodeUrl(item));
+                    fetchUrls.push(buildSimpleGeocodeUrl(item));
+                    jsonpUrls.push(buildJsonpUrl(item));
+                });
+                const handleResults = (results) => {
+                    if (Array.isArray(results) && results.length > 0) {
+                        const first = results[0];
+                        const lat = Number.parseFloat(first.lat);
+                        const lng = Number.parseFloat(first.lon);
+                        updateMarker(lat, lng);
+                        return true;
+                    }
+                    return false;
+                };
+                const tryUrls = (urls, fetcher, index = 0) => {
+                    if (index >= urls.length) {
+                        return Promise.resolve(false);
+                    }
+                    return fetcher(urls[index])
+                        .then(results => handleResults(results) ? true : tryUrls(urls, fetcher, index + 1));
+                };
+                const fetcher = (url) => fetch(url, { signal: geocodeAbort.signal })
+                    .then(response => response.ok ? response.json() : Promise.reject(new Error('fetch_failed')));
+                tryUrls(fetchUrls, fetcher)
+                    .then(found => found ? true : tryUrls(jsonpUrls, jsonpFetch))
+                    .then(found => {
+                        if (!found) {
+                            showGeocodeError('Không tìm thấy vị trí theo địa chỉ đã nhập.');
+                        }
+                    })
+                    .catch(error => {
+                        if (error && error.name === 'AbortError') {
+                            return;
+                        }
+                        tryUrls(jsonpUrls, jsonpFetch)
+                            .then(found => {
+                                if (!found) {
+                                    showGeocodeError('Không tìm thấy vị trí theo địa chỉ đã nhập.');
+                                }
+                            })
+                            .catch(() => {
+                                showGeocodeError('Không thể tra cứu vị trí. Vui lòng thử lại sau.');
+                            });
+                    });
+            }, 500);
+        }
+
+        wardSelect.addEventListener('change', scheduleGeocode);
+    });
+</script>
 
 <div th:replace="layout/layout :: footer"></div>
 </body>

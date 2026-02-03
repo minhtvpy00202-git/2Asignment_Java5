@@ -24,4 +24,6 @@ public interface NotificationService {
     Optional<Notification> findByIdAndUsername(Long id, String username);
 
     Notification markRead(Notification notification);
+
+    void deleteByOrderId(Long orderId);
 }

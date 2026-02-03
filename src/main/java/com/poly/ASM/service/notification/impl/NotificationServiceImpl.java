@@ -96,4 +96,12 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setRead(true);
         return notificationRepository.save(notification);
     }
+
+    @Override
+    public void deleteByOrderId(Long orderId) {
+        if (orderId == null) {
+            return;
+        }
+        notificationRepository.deleteByOrderId(orderId);
+    }
 }

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản trị - Camera cửa hàng</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <link rel="stylesheet" th:href="@{/css/pages.css}">
+</head>
+<body>
+<div th:replace="layout/layout :: header"></div>
+
+<main class="container" style="padding: 16px;">
+    <h3 class="page-title">Camera cửa hàng</h3>
+    <nav class="admin-nav">
+        <a th:href="@{/admin/category/index}">Danh mục</a>
+        <a th:href="@{/admin/product/index}">Sản phẩm</a>
+        <a th:href="@{/admin/account/index}">Tài khoản</a>
+        <a th:href="@{/admin/order/index}">Đơn hàng</a>
+        <a th:href="@{/admin/camera/index}">Camera cửa hàng</a>
+        <a th:href="@{/admin/report/revenue}">Doanh thu</a>
+        <a th:href="@{/admin/report/vip}">Khách hàng VIP</a>
+    </nav>
+
+    <section class="two-column">
+        <div class="card">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <h4>Luồng trực tiếp</h4>
+                <span class="badge">Đang kết nối</span>
+            </div>
+            <div style="margin-top: 12px;">
+                <video id="cameraStream"
+                       controls
+                       autoplay
+                       muted
+                       playsinline
+                       style="width:100%; border-radius:12px; background:#000;"
+                       th:attr="data-stream=${cameraStreamUrl}"></video>
+            </div>
+            <div id="streamMessage" class="status-message" style="margin-top: 12px; display: none;"></div>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <h4>Thông báo chuyển động</h4>
+                <button id="toggleMotionBtn" class="btn btn-outline" type="button">Tạm dừng</button>
+            </div>
+            <div id="motionList" class="review-list" style="margin-top: 12px;"></div>
+        </div>
+    </section>
+</main>
+
+<div th:replace="layout/layout :: footer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const video = document.getElementById('cameraStream');
+        const streamMessage = document.getElementById('streamMessage');
+        const motionList = document.getElementById('motionList');
+        const toggleBtn = document.getElementById('toggleMotionBtn');
+        const streamUrl = video ? video.dataset.stream : '';
+        let motionEnabled = true;
+        let motionTimer = null;
+        let hasMotion = false;
+
+        function setMessage(text) {
+            if (!streamMessage) {
+                return;
+            }
+            streamMessage.textContent = text;
+            streamMessage.style.display = 'block';
+        }
+
+        function addMotionEvent(text) {
+            if (!motionList) {
+                return;
+            }
+            if (!hasMotion) {
+                motionList.innerHTML = '';
+                hasMotion = true;
+            }
+            const item = document.createElement('div');
+            item.className = 'status-message';
+            item.textContent = text;
+            motionList.prepend(item);
+            if (motionList.children.length > 8) {
+                motionList.removeChild(motionList.lastElementChild);
+            }
+        }
+
+        function scheduleMotion() {
+            if (!motionEnabled) {
+                return;
+            }
+            const delay = 8000 + Math.floor(Math.random() * 12000);
+            motionTimer = setTimeout(() => {
+                const now = new Date();
+                const time = now.toLocaleTimeString('vi-VN');
+                addMotionEvent(`Phát hiện chuyển động lúc ${time}`);
+                scheduleMotion();
+            }, delay);
+        }
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                motionEnabled = !motionEnabled;
+                toggleBtn.textContent = motionEnabled ? 'Tạm dừng' : 'Tiếp tục';
+                if (motionEnabled) {
+                    scheduleMotion();
+                } else if (motionTimer) {
+                    clearTimeout(motionTimer);
+                    motionTimer = null;
+                }
+            });
+        }
+
+        if (motionList && motionList.children.length === 0) {
+            addMotionEvent('Chưa có cảnh báo chuyển động.');
+        }
+
+        if (!streamUrl) {
+            setMessage('Chưa cấu hình đường dẫn HLS cho camera.');
+            return;
+        }
+
+        if (window.Hls && Hls.isSupported()) {
+            const hls = new Hls({ lowLatencyMode: true });
+            hls.loadSource(streamUrl);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.ERROR, () => {
+                setMessage('Không thể phát luồng camera.');
+            });
+        } else if (video && video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = streamUrl;
+        } else {
+            setMessage('Trình duyệt không hỗ trợ phát HLS.');
+        }
+
+        scheduleMotion();
+    });
+</script>
+</body>
+</html>

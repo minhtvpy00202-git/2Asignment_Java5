@@ -11,6 +11,7 @@
     <link rel="stylesheet" th:href="@{/css/layout.css}">
     <link rel="stylesheet" th:href="@{/css/components.css}">
     <link rel="stylesheet" th:href="@{/css/pages.css}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
 <div th:replace="layout/layout :: header"></div>
@@ -22,6 +23,7 @@
         <a th:href="@{/admin/product/index}">Sản phẩm</a>
         <a th:href="@{/admin/account/index}">Tài khoản</a>
         <a th:href="@{/admin/order/index}">Đơn hàng</a>
+        <a th:href="@{/admin/camera/index}">Camera cửa hàng</a>
         <a th:href="@{/admin/report/revenue}">Doanh thu</a>
         <a th:href="@{/admin/report/vip}">Khách hàng VIP</a>
     </nav>
@@ -37,12 +39,12 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="o : ${orders}">
+            <tr th:each="o : ${orders}" th:attr="data-order-id=${o.id}">
                 <td th:text="${o.id}">1</td>
                 <td th:text="${o.account != null ? o.account.username : 'N/A'}">user</td>
                 <td>
                     <span class="badge"
-                          th:text="${(o.status == 'NEW' or o.status == 'PLACED')} ? 'Đã đặt' : (${o.status == 'SHIPPING'} ? 'Đang giao' : (${o.status == 'DONE' or o.status == 'DELIVERED_SUCCESS'} ? 'Giao thành công' : (${o.status == 'CANCEL' or o.status == 'DELIVERY_FAILED'} ? 'Giao thất bại' : o.status)))">
+                          th:text="${(o.status == 'NEW' or o.status == 'PLACED')} ? 'Đã đặt' : (${o.status == 'SHIPPING'} ? 'Bắt đầu giao' : (${o.status == 'DONE' or o.status == 'DELIVERED_SUCCESS'} ? 'Giao thành công' : (${o.status == 'CANCEL' or o.status == 'DELIVERY_FAILED'} ? 'Giao thất bại' : o.status)))">
                         Đơn mới
                     </span>
                 </td>
@@ -62,13 +64,13 @@
             Mã đơn: <strong th:text="${order.id}">1</strong>
             - Địa chỉ: <span th:text="${order.address}">addr</span>
         </div>
-        <form th:action="@{/admin/order/update-status}" method="post" style="margin-top: 12px;">
+        <form id="updateStatusForm" th:action="@{/admin/order/update-status}" method="post" style="margin-top: 12px;">
             <input type="hidden" name="id" th:value="${order.id}">
             <div class="form-group">
                 <label>Trạng thái đơn hàng</label>
                 <select name="status">
                     <option value="PLACED" th:selected="${order.status == 'PLACED' or order.status == 'NEW'}">Đã đặt</option>
-                    <option value="SHIPPING" th:selected="${order.status == 'SHIPPING'}">Đang giao</option>
+                    <option value="SHIPPING" th:selected="${order.status == 'SHIPPING'}">Bắt đầu giao</option>
                     <option value="DELIVERED_SUCCESS" th:selected="${order.status == 'DELIVERED_SUCCESS' or order.status == 'DONE'}">Giao thành công</option>
                     <option value="DELIVERY_FAILED" th:selected="${order.status == 'DELIVERY_FAILED' or order.status == 'CANCEL'}">Giao thất bại</option>
                 </select>
@@ -94,7 +96,185 @@
             </tbody>
         </table>
     </div>
+    <div th:if="${order != null}" style="margin-top: 16px;" class="card">
+        <h4>Bản đồ giao hàng</h4>
+        <div id="deliveryMap" style="height: 360px;"
+             th:attr="data-order-id=${order.id},data-status=${order.status},data-lat=${deliveryLat},data-lng=${deliveryLng},data-address=${order.address}"></div>
+    </div>
 </main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const mapEl = document.getElementById('deliveryMap');
+        if (!mapEl) {
+            return;
+        }
+        const orderId = mapEl.dataset.orderId;
+        const orderStatus = mapEl.dataset.status;
+        const statusLabels = {
+            NEW: 'Đã đặt',
+            PLACED: 'Đã đặt',
+            SHIPPING: 'Bắt đầu giao',
+            DELIVERED_SUCCESS: 'Giao thành công',
+            DONE: 'Giao thành công',
+            DELIVERY_FAILED: 'Giao thất bại',
+            CANCEL: 'Giao thất bại'
+        };
+        let shipperTimer = null;
+        let routeLatLngs = null;
+        let shipperMarker = null;
+        let destLat = parseFloat(mapEl.dataset.lat);
+        let destLng = parseFloat(mapEl.dataset.lng);
+        if (!Number.isFinite(destLat) || !Number.isFinite(destLng)) {
+            const address = mapEl.dataset.address || '';
+            const markerIndex = address.indexOf('||');
+            if (markerIndex !== -1) {
+                const coordText = address.slice(markerIndex + 2).trim();
+                const parts = coordText.split(',');
+                if (parts.length >= 2) {
+                    const parsedLat = parseFloat(parts[0].trim());
+                    const parsedLng = parseFloat(parts[1].trim());
+                    if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
+                        destLat = parsedLat;
+                        destLng = parsedLng;
+                    }
+                }
+            }
+        }
+        if (!Number.isFinite(destLat) || !Number.isFinite(destLng)) {
+            const wrapper = mapEl.closest('.card');
+            if (wrapper) {
+                wrapper.style.display = 'none';
+            }
+            return;
+        }
+        const storeLat = 13.779876;
+        const storeLng = 109.228232;
+        const map = L.map(mapEl).setView([(storeLat + destLat) / 2, (storeLng + destLng) / 2], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+        L.marker([storeLat, storeLng]).addTo(map).bindPopup('Cửa hàng');
+        L.marker([destLat, destLng]).addTo(map).bindPopup('Điểm giao');
+        const routeUrl = `https://router.project-osrm.org/route/v1/driving/${storeLng},${storeLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+        fetch(routeUrl)
+            .then(response => response.ok ? response.json() : Promise.reject())
+            .then(data => {
+                if (!data.routes || !data.routes[0]) {
+                    return;
+                }
+                const coords = data.routes[0].geometry.coordinates;
+                routeLatLngs = coords.map(coord => [coord[1], coord[0]]);
+                const routeLine = L.polyline(routeLatLngs, { color: '#2563eb', weight: 5 }).addTo(map);
+                map.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
+                const shipperIcon = L.icon({
+                    iconUrl: '/images/delivery-truck.png',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                    popupAnchor: [0, -16]
+                });
+                shipperMarker = L.marker(routeLatLngs[0], { icon: shipperIcon }).addTo(map);
+                if (mapEl.dataset.status === 'SHIPPING') {
+                    startSimulation();
+                }
+            })
+            .catch(() => {});
+
+        function startSimulation() {
+            if (!routeLatLngs || !shipperMarker) {
+                return;
+            }
+            if (shipperTimer) {
+                return;
+            }
+            let idx = 0;
+            const totalMs = 15000;
+            const steps = Math.max(routeLatLngs.length - 1, 1);
+            const intervalMs = Math.max(Math.floor(totalMs / steps), 20);
+            shipperTimer = setInterval(() => {
+                idx += 1;
+                if (idx >= routeLatLngs.length) {
+                    stopSimulation();
+                    completeDelivery(orderId);
+                    return;
+                }
+                shipperMarker.setLatLng(routeLatLngs[idx]);
+            }, intervalMs);
+        }
+
+        function stopSimulation() {
+            if (!shipperTimer) {
+                return;
+            }
+            clearInterval(shipperTimer);
+            shipperTimer = null;
+        }
+
+        function updateStatusUI(status) {
+            mapEl.dataset.status = status;
+            const form = document.getElementById('updateStatusForm');
+            if (form) {
+                const select = form.querySelector('select[name="status"]');
+                if (select) {
+                    select.value = status;
+                }
+            }
+            const rowBadge = document.querySelector(`tr[data-order-id="${orderId}"] .badge`);
+            if (rowBadge) {
+                rowBadge.textContent = statusLabels[status] || status;
+            }
+        }
+
+        function completeDelivery(id) {
+            if (!id) {
+                return;
+            }
+            const isSuccess = Math.random() < 0.6;
+            const nextStatus = isSuccess ? 'DELIVERED_SUCCESS' : 'DELIVERY_FAILED';
+            const body = new URLSearchParams();
+            body.set('id', id);
+            body.set('status', nextStatus);
+            fetch('/admin/order/update-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: body.toString()
+            }).then(() => {
+                updateStatusUI(nextStatus);
+                stopSimulation();
+            });
+        }
+
+        const form = document.getElementById('updateStatusForm');
+        if (form) {
+            form.addEventListener('submit', event => {
+                event.preventDefault();
+                const formData = new FormData(form);
+                const nextStatus = formData.get('status');
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams(formData).toString()
+                }).then(() => {
+                    if (typeof nextStatus === 'string') {
+                        updateStatusUI(nextStatus);
+                        if (nextStatus === 'SHIPPING') {
+                            startSimulation();
+                        } else {
+                            stopSimulation();
+                        }
+                    }
+                });
+            });
+        }
+    });
+</script>
 
 <div th:replace="layout/layout :: footer"></div>
 </body>

@@ -14,6 +14,7 @@ import com.poly.ASM.service.order.OrderService;
 import com.poly.ASM.service.product.ProductSizeService;
 import com.poly.ASM.service.review.ProductReviewService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.sql.ResultSetMetaData;
+import java.util.Locale;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +38,7 @@ public class OrderController {
     private final ProductSizeService productSizeService;
     private final ProductReviewService productReviewService;
     private final NotificationService notificationService;
+    private final JdbcTemplate jdbcTemplate;
 
     @GetMapping("/order/checkout")
     public String checkoutForm(Model model) {
@@ -44,7 +48,10 @@ public class OrderController {
     }
 
     @PostMapping("/order/checkout")
-    public String checkout(@RequestParam("address") String address, Model model) {
+    public String checkout(@RequestParam("address") String address,
+                           @RequestParam(value = "lat", required = false) Double lat,
+                           @RequestParam(value = "lng", required = false) Double lng,
+                           Model model) {
         List<CartItem> items = cartService.getCartItems();
         if (items.isEmpty()) {
             model.addAttribute("message", "Giỏ hàng trống");
@@ -63,6 +70,7 @@ public class OrderController {
         order.setAddress(address);
         order.setStatus("NEW");
         Order savedOrder = orderService.create(order);
+        updateOrderCoordinates(savedOrder.getId(), lat, lng);
         notificationService.notifyOrderPlacedForUser(user, savedOrder);
         notificationService.notifyOrderPlacedForAdmins(savedOrder);
 
@@ -140,5 +148,61 @@ public class OrderController {
             return false;
         }
         return "DELIVERED_SUCCESS".equals(status) || "DONE".equals(status);
+    }
+
+    private void updateOrderCoordinates(Long orderId, Double lat, Double lng) {
+        if (orderId == null || lat == null || lng == null) {
+            return;
+        }
+        Optional<ColumnPair> columns = findLatLngColumns(orderId);
+        if (columns.isEmpty()) {
+            return;
+        }
+        ColumnPair pair = columns.get();
+        try {
+            jdbcTemplate.update("update orders set " + pair.lat + " = ?, " + pair.lng + " = ? where id = ?",
+                    lat, lng, orderId);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private Optional<ColumnPair> findLatLngColumns(Long orderId) {
+        try {
+            return jdbcTemplate.query("select * from orders where id = ?", rs -> {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                ResultSetMetaData meta = rs.getMetaData();
+                String latCol = null;
+                String lngCol = null;
+                for (int i = 1; i <= meta.getColumnCount(); i++) {
+                    String label = meta.getColumnLabel(i);
+                    String columnName = meta.getColumnName(i);
+                    String key = (label == null || label.isBlank() ? columnName : label).toLowerCase(Locale.ROOT);
+                    if (latCol == null && (key.equals("lat") || key.equals("latitude") || key.equals("order_lat") || key.equals("order_latitude") || key.equals("shipping_lat") || key.equals("delivery_lat") || key.equals("ship_lat"))) {
+                        latCol = columnName;
+                    }
+                    if (lngCol == null && (key.equals("lng") || key.equals("longitude") || key.equals("order_lng") || key.equals("order_longitude") || key.equals("shipping_lng") || key.equals("delivery_lng") || key.equals("ship_lng"))) {
+                        lngCol = columnName;
+                    }
+                }
+                if (latCol == null || lngCol == null) {
+                    return Optional.empty();
+                }
+                return Optional.of(new ColumnPair(latCol, lngCol));
+            }, orderId);
+        } catch (Exception ex) {
+            return Optional.empty();
+        }
+    }
+
+    private static class ColumnPair {
+        private final String lat;
+        private final String lng;
+
+        private ColumnPair(String lat, String lng) {
+            this.lat = lat;
+            this.lng = lng;
+        }
     }
 }

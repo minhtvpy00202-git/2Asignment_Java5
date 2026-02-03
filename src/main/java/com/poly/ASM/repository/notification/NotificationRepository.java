@@ -13,6 +13,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     long countByAccountUsernameAndReadFalse(String username);
 
+    void deleteByOrderId(Long orderId);
+
     @Query("""
             select n
             from Notification n
