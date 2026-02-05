@@ -24,3 +24,5 @@ server:
   tomcat:
     max-part-count: 5000
     max-parameter-count: 10000
+camera:
+  hls-url: http://10.86.42.36:8888/camera/index.m3u8
