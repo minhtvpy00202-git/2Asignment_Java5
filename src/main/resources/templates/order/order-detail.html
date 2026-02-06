@@ -27,9 +27,19 @@
             Mã đơn: <strong th:text="${order.id}">1</strong>
             - Ngày: <span th:text="${order.createDate}">date</span>
             - Trạng thái:
-            <span class="badge"
-                  th:text="${(order.status == 'NEW' or order.status == 'PLACED')} ? 'Đã đặt' : (${order.status == 'SHIPPING'} ? 'Đang giao' : (${order.status == 'DONE' or order.status == 'DELIVERED_SUCCESS'} ? 'Giao thành công' : (${order.status == 'CANCEL' or order.status == 'DELIVERY_FAILED'} ? 'Giao thất bại' : order.status)))">
-                Đơn mới
+            <span class="badge" th:switch="${order.status}">
+                <span th:case="'PLACED_PAID'">Đã đặt - đã TT</span>
+                <span th:case="'PLACED_UNPAID'">Đã đặt - chưa TT</span>
+                <span th:case="'NEW'">Đã đặt - chưa TT</span>
+                <span th:case="'PLACED'">Đã đặt - chưa TT</span>
+                <span th:case="'SHIPPING_PAID'">Đang giao - đã TT</span>
+                <span th:case="'SHIPPING_UNPAID'">Đang giao - chưa TT</span>
+                <span th:case="'SHIPPING'">Đang giao - chưa TT</span>
+                <span th:case="'DONE'">Giao thành công</span>
+                <span th:case="'DELIVERED_SUCCESS'">Giao thành công</span>
+                <span th:case="'CANCEL'">Giao thất bại</span>
+                <span th:case="'DELIVERY_FAILED'">Giao thất bại</span>
+                <span th:case="*" th:text="${order.status}">Đơn mới</span>
             </span>
         </div>
         <div>

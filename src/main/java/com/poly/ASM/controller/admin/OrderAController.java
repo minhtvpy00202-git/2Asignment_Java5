@@ -4,6 +4,7 @@ import com.poly.ASM.entity.order.Order;
 import com.poly.ASM.service.notification.NotificationService;
 import com.poly.ASM.service.order.OrderDetailService;
 import com.poly.ASM.service.order.OrderService;
+import com.poly.ASM.service.payment.PayosPaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import vn.payos.exception.PayOSException;
 
 import java.sql.ResultSetMetaData;
 import java.util.Locale;
@@ -28,10 +31,17 @@ public class OrderAController {
     private final OrderDetailService orderDetailService;
     private final NotificationService notificationService;
     private final JdbcTemplate jdbcTemplate;
+    private final PayosPaymentService payosPaymentService;
 
     @GetMapping("/admin/order/index")
-    public String index(Model model) {
+    public String index(@RequestParam(value = "payosMessage", required = false) String payosMessage,
+                        @RequestParam(value = "payosError", required = false) Boolean payosError,
+                        Model model) {
         model.addAttribute("orders", orderService.findAll());
+        if (payosMessage != null && !payosMessage.isBlank()) {
+            model.addAttribute("payosMessage", payosMessage);
+        }
+        model.addAttribute("payosError", payosError != null && payosError);
         return "admin/order";
     }
 
@@ -78,6 +88,33 @@ public class OrderAController {
             return ResponseEntity.noContent().build();
         }
         return "redirect:/admin/order/detail/" + id;
+    }
+
+    @PostMapping("/admin/order/payos/cancel")
+    public String cancelPayos(@RequestParam("orderCode") Long orderCode,
+                              RedirectAttributes redirectAttributes) {
+        String message;
+        boolean error = false;
+        if (orderCode == null || orderCode <= 0) {
+            message = "Mã đơn không ở trạng thái đang chờ thanh toán. Xin thử lại";
+            error = true;
+        } else {
+            boolean cancelled = false;
+            try {
+                cancelled = payosPaymentService.cancelIfPending(orderCode, "Admin cancel pending order");
+            } catch (PayOSException ignored) {
+                cancelled = false;
+            }
+            if (cancelled) {
+                message = "Đã gửi lệnh huỷ lên PayOS cho đơn #" + orderCode;
+            } else {
+                message = "Mã đơn không ở trạng thái đang chờ thanh toán. Xin thử lại";
+                error = true;
+            }
+        }
+        redirectAttributes.addAttribute("payosMessage", message);
+        redirectAttributes.addAttribute("payosError", error);
+        return "redirect:/admin/order/index";
     }
 
     private Optional<double[]> findOrderCoordinates(Long orderId) {

@@ -15,156 +15,258 @@
 <body>
 <div th:replace="layout/layout :: header"></div>
 
-<main class="container" style="padding: 16px;">
+<main class="container admin-product-page" style="padding: 16px;">
     <h3 class="page-title">Quản lý sản phẩm</h3>
-    <nav class="admin-nav">
-        <a th:href="@{/admin/category/index}">Danh mục</a>
-        <a th:href="@{/admin/product/index}">Sản phẩm</a>
-        <a th:href="@{/admin/account/index}">Tài khoản</a>
-        <a th:href="@{/admin/order/index}">Đơn hàng</a>
-        <a th:href="@{/admin/camera/index}">Camera cửa hàng</a>
-        <a th:href="@{/admin/report/revenue}">Doanh thu</a>
-        <a th:href="@{/admin/report/vip}">Khách hàng VIP</a>
-    </nav>
+    <div class="admin-product-shell">
+        <div class="admin-product-sidebar">
+            <nav class="admin-nav admin-product-nav">
+                <a th:href="@{/admin/category/index}">Danh mục</a>
+                <a th:href="@{/admin/product/index}">Sản phẩm</a>
+                <a th:href="@{/admin/account/index}">Tài khoản</a>
+                <a th:href="@{/admin/order/index}">Đơn hàng</a>
+                <a th:href="@{/admin/camera/index}">Camera cửa hàng</a>
+                <a th:href="@{/admin/report/revenue}">Doanh thu</a>
+                <a th:href="@{/admin/report/vip}">Khách hàng VIP</a>
+            </nav>
 
-    <form th:action="@{/admin/product/create}" method="post" class="card" enctype="multipart/form-data">
-        <input type="hidden" name="id" th:value="${product.id}">
-        <div class="form-group">
-            <label>Tên</label>
-            <input type="text" name="name" th:value="${product.name}" required>
-        </div>
-        <div class="form-group">
-            <label>Giá</label>
-            <input type="number" step="0.01" name="price" th:value="${product.price}" required>
-        </div>
-        <div class="form-group">
-            <label>Giảm giá (%)</label>
-            <input type="number" step="0.01" name="discount" th:value="${product.discount}">
-        </div>
-        <div class="form-group">
-            <label>Số lượng</label>
-            <input type="number" id="totalQuantity" name="quantity" th:value="${product.quantity}">
-        </div>
-        <div class="form-group">
-            <label>Ảnh sản phẩm</label>
-            <input type="file" name="imageFile" accept="image/*">
-            <div style="margin-top: 6px; color: #64748b;">
-                Ảnh hiện tại: <span th:text="${product.image}">Chưa có</span>
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Mô tả</label>
-            <input type="text" name="description" th:value="${product.description}">
-        </div>
-        <div class="form-group">
-            <label>Tồn kho theo size</label>
-            <div class="card">
-                <div id="sizeError" class="status-message status-error" style="display:none;"></div>
-                <div class="size-stock-grid">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Size</th>
-                            <th>Số lượng</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="s,stat : ${sizes}" th:if="${stat.index < 3}">
-                            <td th:text="${s.name}">M</td>
-                            <td>
-                                <input type="number" min="0" class="size-qty" th:name="${'size_' + s.id}"
-                                       th:value="${sizeQtyMap[s.id] != null ? sizeQtyMap[s.id] : 0}">
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Size</th>
-                            <th>Số lượng</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="s,stat : ${sizes}" th:if="${stat.index >= 3}">
-                            <td th:text="${s.name}">M</td>
-                            <td>
-                                <input type="number" min="0" class="size-qty" th:name="${'size_' + s.id}"
-                                       th:value="${sizeQtyMap[s.id] != null ? sizeQtyMap[s.id] : 0}">
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
+            <form class="card admin-product-filter" th:action="@{/admin/product/index}" method="get">
+                <div class="form-group">
+                    <label>Từ khoá</label>
+                    <input type="text" name="keyword" th:value="${keyword}">
                 </div>
+                <div class="form-group">
+                    <label>Thể loại</label>
+                    <select name="categoryId">
+                        <option value="">Tất cả</option>
+                        <option th:each="c : ${categories}"
+                                th:value="${c.id}"
+                                th:text="${c.name}"
+                                th:selected="${selectedCategoryId != null and selectedCategoryId == c.id}">
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Giá từ</label>
+                    <input type="number" step="0.01" name="minPrice" th:value="${minPrice}">
+                </div>
+                <div class="form-group">
+                    <label>Giá đến</label>
+                    <input type="number" step="0.01" name="maxPrice" th:value="${maxPrice}">
+                </div>
+                <div class="table-actions">
+                    <button class="btn" type="submit">Lọc</button>
+                    <a class="btn btn-outline" th:href="@{/admin/product/index}">Xoá lọc</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="admin-product-main">
+            <div class="card admin-product-list">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                    <h4>Danh sách</h4>
+                    <button id="openProductModalBtn" class="btn" type="button">Thêm / Sửa</button>
+                </div>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên</th>
+                        <th>Giá</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="p : ${products}">
+                        <td th:text="${p.id}">1</td>
+                        <td th:text="${p.name}">Tên</td>
+                        <td th:text="${#numbers.formatDecimal(p.price, 0, 'POINT', 0, 'COMMA')} + ' VNĐ'">0</td>
+                        <td class="table-actions">
+                            <a class="btn btn-outline"
+                               th:href="@{/admin/product/edit/{id}(id=${p.id},page=${currentPage},keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}">Sửa</a>
+                            <a class="btn btn-outline"
+                               th:href="@{/admin/product/delete/{id}(id=${p.id},page=${currentPage},keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}"
+                               onclick="return confirm('Bạn có chắc chắn muốn xoá mục này không?')">Xoá</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
             </div>
-        </div>
-        <div class="form-group">
-            <label>Còn hàng</label>
-            <input type="checkbox" name="available" th:checked="${product.available}">
-        </div>
-        <div class="form-group">
-            <label>Danh mục</label>
-            <select name="categoryId">
-                <option th:each="c : ${categories}"
-                        th:value="${c.id}"
-                        th:text="${c.name}"
-                        th:selected="${product.category != null and product.category.id == c.id}">
-                </option>
-            </select>
-        </div>
-        <div class="table-actions">
-            <button class="btn" type="submit" th:if="${product.id == null}">Thêm</button>
-            <a class="btn btn-outline" th:if="${product.id == null}" th:href="@{/admin/product/index}">Làm mới</a>
-            <button class="btn" type="submit" th:if="${product.id != null}" formaction="/admin/product/update">Cập nhật</button>
-            <a class="btn btn-outline" th:if="${product.id != null}" th:href="@{/admin/product/index}">Huỷ</a>
-        </div>
-    </form>
 
-    <h4 style="margin-top: 16px;">Danh sách</h4>
-    <div class="card">
-        <table>
-            <thead>
-            <tr>
-                <th>ID</th>
-                <th>Tên</th>
-                <th>Giá</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="p : ${products}">
-                <td th:text="${p.id}">1</td>
-                <td th:text="${p.name}">Tên</td>
-                <td th:text="${#numbers.formatDecimal(p.price, 0, 'POINT', 0, 'COMMA')} + ' VNĐ'">0</td>
-                <td class="table-actions">
-                    <a class="btn btn-outline" th:href="@{|/admin/product/edit/${p.id}?page=${currentPage}|}">Sửa</a>
-                    <a class="btn btn-outline" th:href="@{|/admin/product/delete/${p.id}?page=${currentPage}|}"
-                       onclick="return confirm('Bạn có chắc chắn muốn xoá mục này không?')">Xoá</a>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+            <div class="pagination admin-product-pagination"
+                 th:if="${totalPages != null and totalPages > 1}"
+                 th:with="start=${(currentPage / 5) * 5}, end=${((currentPage / 5) * 5 + 4) < (totalPages - 1) ? ((currentPage / 5) * 5 + 4) : (totalPages - 1)}">
+                <a class="page-link"
+                   th:href="@{/admin/product/index(page=0,keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}"
+                   th:classappend="${currentPage == 0} ? 'disabled'">First</a>
+                <a class="page-link"
+                   th:href="@{/admin/product/index(page=${currentPage - 1},keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}"
+                   th:classappend="${currentPage == 0} ? 'disabled'">Prev</a>
 
-    <div class="pagination" th:if="${totalPages != null and totalPages > 1}">
-        <a class="page-link"
-           th:href="@{/admin/product/index(page=${currentPage - 1})}"
-           th:classappend="${currentPage == 0} ? 'disabled'">Trước</a>
-        <a class="page-link"
-           th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
-           th:text="${i + 1}"
-           th:href="@{/admin/product/index(page=${i})}"
-           th:classappend="${i == currentPage} ? 'active'">1</a>
-        <a class="page-link"
-           th:href="@{/admin/product/index(page=${currentPage + 1})}"
-           th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">Sau</a>
+                <span class="page-link disabled" th:if="${start > 0}">...</span>
+                <a class="page-link"
+                   th:each="i : ${#numbers.sequence(start, end)}"
+                   th:text="${i + 1}"
+                   th:href="@{/admin/product/index(page=${i},keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}"
+                   th:classappend="${i == currentPage} ? 'active'">1</a>
+                <span class="page-link disabled" th:if="${end < totalPages - 1}">...</span>
+
+                <a class="page-link"
+                   th:href="@{/admin/product/index(page=${currentPage + 1},keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}"
+                   th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">Next</a>
+                <a class="page-link"
+                   th:href="@{/admin/product/index(page=${totalPages - 1},keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}"
+                   th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">Last</a>
+            </div>
+
+        </div>
     </div>
 </main>
 
 <div th:replace="layout/layout :: footer"></div>
+<div id="productFormModal" class="modal-backdrop" th:attr="data-open=${product != null and product.id != null}">
+    <div class="modal">
+        <div class="modal-header">
+            <h4>Thêm / Chỉnh sửa sản phẩm</h4>
+            <button type="button" class="btn btn-outline modal-close-btn">Đóng</button>
+        </div>
+        <form th:action="@{/admin/product/create}" method="post" class="admin-product-form" enctype="multipart/form-data">
+            <input type="hidden" name="id" th:value="${product.id}">
+            <div class="admin-form-grid">
+                <div class="form-group">
+                    <label>Tên</label>
+                    <input type="text" name="name" th:value="${product.name}" required>
+                </div>
+                <div class="form-group">
+                    <label>Giá</label>
+                    <input type="number" step="0.01" name="price" th:value="${product.price}" required>
+                </div>
+                <div class="form-group">
+                    <label>Giảm giá (%)</label>
+                    <input type="number" step="0.01" name="discount" th:value="${product.discount}">
+                </div>
+                <div class="form-group">
+                    <label>Số lượng</label>
+                    <input type="number" id="totalQuantity" name="quantity" th:value="${product.quantity}">
+                </div>
+                <div class="form-group full-span">
+                    <label>Ảnh sản phẩm</label>
+                    <input type="file" name="imageFile" accept="image/*">
+                    <div style="margin-top: 6px; color: #64748b;">
+                        Ảnh hiện tại: <span th:text="${product.image}">Chưa có</span>
+                    </div>
+                </div>
+                <div class="form-group full-span">
+                    <label>Mô tả</label>
+                    <input type="text" name="description" th:value="${product.description}">
+                </div>
+                <div class="form-group full-span">
+                    <label>Tồn kho theo size</label>
+                    <div class="card">
+                        <div id="sizeError" class="status-message status-error" style="display:none;"></div>
+                        <div class="size-stock-grid">
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Size</th>
+                                    <th>Số lượng</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="s,stat : ${sizes}" th:if="${stat.index < 3}">
+                                    <td th:text="${s.name}">M</td>
+                                    <td>
+                                        <input type="number" min="0" class="size-qty" th:name="${'size_' + s.id}"
+                                               th:value="${sizeQtyMap[s.id] != null ? sizeQtyMap[s.id] : 0}">
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+
+                            <table>
+                                <thead>
+                                <tr>
+                                    <th>Size</th>
+                                    <th>Số lượng</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="s,stat : ${sizes}" th:if="${stat.index >= 3}">
+                                    <td th:text="${s.name}">M</td>
+                                    <td>
+                                        <input type="number" min="0" class="size-qty" th:name="${'size_' + s.id}"
+                                               th:value="${sizeQtyMap[s.id] != null ? sizeQtyMap[s.id] : 0}">
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Còn hàng</label>
+                    <input type="checkbox" name="available" th:checked="${product.available}">
+                </div>
+                <div class="form-group">
+                    <label>Danh mục</label>
+                    <select name="categoryId">
+                        <option th:each="c : ${categories}"
+                                th:value="${c.id}"
+                                th:text="${c.name}"
+                                th:selected="${product.category != null and product.category.id == c.id}">
+                        </option>
+                    </select>
+                </div>
+                <div class="table-actions admin-form-actions">
+                    <button class="btn" type="submit" th:if="${product.id == null}">Thêm</button>
+                    <a class="btn btn-outline" th:if="${product.id == null}" th:href="@{/admin/product/index}">Làm mới</a>
+                    <button class="btn" type="submit" th:if="${product.id != null}" formaction="/admin/product/update">Cập nhật</button>
+                    <a class="btn btn-outline" th:if="${product.id != null}" th:href="@{/admin/product/index}">Huỷ</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 <script>
     (function () {
+        const backdrop = document.getElementById('productFormModal');
+        const openBtn = document.getElementById('openProductModalBtn');
+        const closeBtn = document.querySelector('.modal-close-btn');
+        function openModal() {
+            if (!backdrop) {
+                return;
+            }
+            backdrop.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeModal() {
+            if (!backdrop) {
+                return;
+            }
+            backdrop.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        if (openBtn) {
+            openBtn.addEventListener('click', openModal);
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeModal);
+        }
+        if (backdrop) {
+            backdrop.addEventListener('click', function (e) {
+                if (e.target === backdrop) {
+                    closeModal();
+                }
+            });
+            if (backdrop.dataset.open === 'true') {
+                openModal();
+            }
+        }
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
         const totalInput = document.getElementById('totalQuantity');
         const sizeInputs = Array.from(document.querySelectorAll('.size-qty'));
         const errorBox = document.getElementById('sizeError');

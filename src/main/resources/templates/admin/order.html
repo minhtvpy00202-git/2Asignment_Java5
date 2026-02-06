@@ -16,90 +16,122 @@
 <body>
 <div th:replace="layout/layout :: header"></div>
 
-<main class="container" style="padding: 16px;">
+<main class="container admin-product-page" style="padding: 16px;">
     <h3 class="page-title">Quản lý đơn hàng</h3>
-    <nav class="admin-nav">
-        <a th:href="@{/admin/category/index}">Danh mục</a>
-        <a th:href="@{/admin/product/index}">Sản phẩm</a>
-        <a th:href="@{/admin/account/index}">Tài khoản</a>
-        <a th:href="@{/admin/order/index}">Đơn hàng</a>
-        <a th:href="@{/admin/camera/index}">Camera cửa hàng</a>
-        <a th:href="@{/admin/report/revenue}">Doanh thu</a>
-        <a th:href="@{/admin/report/vip}">Khách hàng VIP</a>
-    </nav>
+    <div class="admin-product-shell">
+        <div class="admin-product-sidebar">
+            <nav class="admin-nav">
+                <a th:href="@{/admin/category/index}">Danh mục</a>
+                <a th:href="@{/admin/product/index}">Sản phẩm</a>
+                <a th:href="@{/admin/account/index}">Tài khoản</a>
+                <a th:href="@{/admin/order/index}">Đơn hàng</a>
+                <a th:href="@{/admin/camera/index}">Camera cửa hàng</a>
+                <a th:href="@{/admin/report/revenue}">Doanh thu</a>
+                <a th:href="@{/admin/report/vip}">Khách hàng VIP</a>
+            </nav>
 
-    <div class="card">
-        <table>
-            <thead>
-            <tr>
-                <th>Mã đơn</th>
-                <th>Username</th>
-                <th>Trạng thái</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="o : ${orders}" th:attr="data-order-id=${o.id}">
-                <td th:text="${o.id}">1</td>
-                <td th:text="${o.account != null ? o.account.username : 'N/A'}">user</td>
-                <td>
-                    <span class="badge"
-                          th:text="${(o.status == 'NEW' or o.status == 'PLACED')} ? 'Đã đặt' : (${o.status == 'SHIPPING'} ? 'Bắt đầu giao' : (${o.status == 'DONE' or o.status == 'DELIVERED_SUCCESS'} ? 'Giao thành công' : (${o.status == 'CANCEL' or o.status == 'DELIVERY_FAILED'} ? 'Giao thất bại' : o.status)))">
-                        Đơn mới
-                    </span>
-                </td>
-                <td class="table-actions">
-                    <a class="btn btn-outline" th:href="@{|/admin/order/detail/${o.id}|}">Chi tiết</a>
-                    <a class="btn btn-outline" th:href="@{|/admin/order/delete/${o.id}|}"
-                       onclick="return confirm('Bạn có chắc chắn muốn xoá mục này không?')">Xoá</a>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div th:if="${order != null}" style="margin-top: 16px;" class="card">
-        <h4>Chi tiết đơn hàng</h4>
-        <div>
-            Mã đơn: <strong th:text="${order.id}">1</strong>
-            - Địa chỉ: <span th:text="${order.address}">addr</span>
-        </div>
-        <form id="updateStatusForm" th:action="@{/admin/order/update-status}" method="post" style="margin-top: 12px;">
-            <input type="hidden" name="id" th:value="${order.id}">
-            <div class="form-group">
-                <label>Trạng thái đơn hàng</label>
-                <select name="status">
-                    <option value="PLACED" th:selected="${order.status == 'PLACED' or order.status == 'NEW'}">Đã đặt</option>
-                    <option value="SHIPPING" th:selected="${order.status == 'SHIPPING'}">Bắt đầu giao</option>
-                    <option value="DELIVERED_SUCCESS" th:selected="${order.status == 'DELIVERED_SUCCESS' or order.status == 'DONE'}">Giao thành công</option>
-                    <option value="DELIVERY_FAILED" th:selected="${order.status == 'DELIVERY_FAILED' or order.status == 'CANCEL'}">Giao thất bại</option>
-                </select>
+            <div class="card">
+                <h4>Huỷ PayOS</h4>
+                <div th:if="${payosMessage != null}" class="status-message" th:classappend="${payosError} ? ' status-error'">
+                    <span th:text="${payosMessage}">Trạng thái PayOS</span>
+                </div>
+                <form th:action="@{/admin/order/payos/cancel}" method="post">
+                    <div class="form-group">
+                        <label>Mã đơn hàng</label>
+                        <input type="number" name="orderCode" min="1" required>
+                    </div>
+                    <button class="btn" type="submit">Gửi lệnh huỷ</button>
+                </form>
             </div>
-            <button class="btn" type="submit">Cập nhật trạng thái</button>
-        </form>
-        <table style="margin-top: 10px;">
-            <thead>
-            <tr>
-                <th>Sản phẩm</th>
-                <th>Giá</th>
-                <th>SL</th>
-                <th>Size</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="d : ${details}">
-                <td th:text="${d.product.name}">Sản phẩm</td>
-                <td th:text="${#numbers.formatDecimal(d.price, 0, 'POINT', 0, 'COMMA')} + ' VNĐ'">0</td>
-                <td th:text="${d.quantity}">1</td>
-                <td th:text="${d.sizeName}">M</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    <div th:if="${order != null}" style="margin-top: 16px;" class="card">
-        <h4>Bản đồ giao hàng</h4>
-        <div id="deliveryMap" style="height: 360px;"
-             th:attr="data-order-id=${order.id},data-status=${order.status},data-lat=${deliveryLat},data-lng=${deliveryLng},data-address=${order.address}"></div>
+        </div>
+
+        <div class="admin-product-main">
+            <div class="card">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Mã đơn</th>
+                        <th>Username</th>
+                        <th>Trạng thái</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="o : ${orders}" th:attr="data-order-id=${o.id}">
+                        <td th:text="${o.id}">1</td>
+                        <td th:text="${o.account != null ? o.account.username : 'N/A'}">user</td>
+                        <td>
+                            <span class="badge" th:switch="${o.status}">
+                                <span th:case="'PLACED_PAID'">Đã đặt - đã TT</span>
+                                <span th:case="'PLACED_UNPAID'">Đã đặt - chưa TT</span>
+                                <span th:case="'NEW'">Đã đặt - chưa TT</span>
+                                <span th:case="'PLACED'">Đã đặt - chưa TT</span>
+                                <span th:case="'SHIPPING_PAID'">Đang giao - đã TT</span>
+                                <span th:case="'SHIPPING_UNPAID'">Đang giao - chưa TT</span>
+                                <span th:case="'SHIPPING'">Đang giao - chưa TT</span>
+                                <span th:case="'DONE'">Giao thành công</span>
+                                <span th:case="'DELIVERED_SUCCESS'">Giao thành công</span>
+                                <span th:case="'CANCEL'">Giao thất bại</span>
+                                <span th:case="'DELIVERY_FAILED'">Giao thất bại</span>
+                                <span th:case="*" th:text="${o.status}">Đơn mới</span>
+                            </span>
+                        </td>
+                        <td class="table-actions">
+                            <a class="btn btn-outline" th:href="@{|/admin/order/detail/${o.id}|}">Chi tiết</a>
+                            <a class="btn btn-outline" th:href="@{|/admin/order/delete/${o.id}|}"
+                               onclick="return confirm('Bạn có chắc chắn muốn xoá mục này không?')">Xoá</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${order != null}" class="card">
+                <h4>Chi tiết đơn hàng</h4>
+                <div>
+                    Mã đơn: <strong th:text="${order.id}">1</strong>
+                    - Địa chỉ: <span th:text="${order.address}">addr</span>
+                </div>
+                <form id="updateStatusForm" th:action="@{/admin/order/update-status}" method="post" style="margin-top: 12px;">
+                    <input type="hidden" name="id" th:value="${order.id}">
+                    <div class="form-group">
+                        <label>Trạng thái đơn hàng</label>
+                        <select name="status">
+                            <option value="PLACED_UNPAID" th:selected="${order.status == 'PLACED_UNPAID' or order.status == 'NEW' or order.status == 'PLACED'}">Đã đặt - chưa TT</option>
+                            <option value="PLACED_PAID" th:selected="${order.status == 'PLACED_PAID'}">Đã đặt - đã TT</option>
+                            <option value="SHIPPING_UNPAID" th:selected="${order.status == 'SHIPPING_UNPAID' or order.status == 'SHIPPING'}">Đang giao - chưa TT</option>
+                            <option value="SHIPPING_PAID" th:selected="${order.status == 'SHIPPING_PAID'}">Đang giao - đã TT</option>
+                            <option value="DELIVERED_SUCCESS" th:selected="${order.status == 'DELIVERED_SUCCESS' or order.status == 'DONE'}">Giao thành công</option>
+                            <option value="DELIVERY_FAILED" th:selected="${order.status == 'DELIVERY_FAILED' or order.status == 'CANCEL'}">Giao thất bại</option>
+                        </select>
+                    </div>
+                    <button class="btn" type="submit">Cập nhật trạng thái</button>
+                </form>
+                <table style="margin-top: 10px;">
+                    <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Giá</th>
+                        <th>SL</th>
+                        <th>Size</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="d : ${details}">
+                        <td th:text="${d.product.name}">Sản phẩm</td>
+                        <td th:text="${#numbers.formatDecimal(d.price, 0, 'POINT', 0, 'COMMA')} + ' VNĐ'">0</td>
+                        <td th:text="${d.quantity}">1</td>
+                        <td th:text="${d.sizeName}">M</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${order != null}" class="card">
+                <h4>Bản đồ giao hàng</h4>
+                <div id="deliveryMap" style="height: 360px;"
+                     th:attr="data-order-id=${order.id},data-status=${order.status},data-lat=${deliveryLat},data-lng=${deliveryLng},data-address=${order.address}"></div>
+            </div>
+        </div>
     </div>
 </main>
 
@@ -113,9 +145,13 @@
         const orderId = mapEl.dataset.orderId;
         const orderStatus = mapEl.dataset.status;
         const statusLabels = {
-            NEW: 'Đã đặt',
-            PLACED: 'Đã đặt',
-            SHIPPING: 'Bắt đầu giao',
+            NEW: 'Đã đặt - chưa TT',
+            PLACED: 'Đã đặt - chưa TT',
+            PLACED_UNPAID: 'Đã đặt - chưa TT',
+            PLACED_PAID: 'Đã đặt - đã TT',
+            SHIPPING: 'Đang giao - chưa TT',
+            SHIPPING_UNPAID: 'Đang giao - chưa TT',
+            SHIPPING_PAID: 'Đang giao - đã TT',
             DELIVERED_SUCCESS: 'Giao thành công',
             DONE: 'Giao thành công',
             DELIVERY_FAILED: 'Giao thất bại',
@@ -175,7 +211,7 @@
                     popupAnchor: [0, -16]
                 });
                 shipperMarker = L.marker(routeLatLngs[0], { icon: shipperIcon }).addTo(map);
-                if (mapEl.dataset.status === 'SHIPPING') {
+                if (mapEl.dataset.status === 'SHIPPING' || mapEl.dataset.status === 'SHIPPING_UNPAID' || mapEl.dataset.status === 'SHIPPING_PAID') {
                     startSimulation();
                 }
             })
@@ -264,7 +300,7 @@
                 }).then(() => {
                     if (typeof nextStatus === 'string') {
                         updateStatusUI(nextStatus);
-                        if (nextStatus === 'SHIPPING') {
+                        if (nextStatus === 'SHIPPING' || nextStatus === 'SHIPPING_UNPAID' || nextStatus === 'SHIPPING_PAID') {
                             startSimulation();
                         } else {
                             stopSimulation();

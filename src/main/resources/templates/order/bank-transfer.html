@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Thanh toán chuyển khoản ngân hàng</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <link rel="stylesheet" th:href="@{/css/pages.css}">
+</head>
+<body>
+<div th:replace="layout/layout :: header"></div>
+
+<main class="container" style="padding: 16px;">
+    <h3 class="page-title">Thanh toán chuyển khoản ngân hàng</h3>
+
+    <div th:if="${message}" class="status-message status-error" th:text="${message}">
+        Thông báo
+    </div>
+
+    <div class="card" th:if="${showCancelPrompt}" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="status-message">
+            Bạn vừa bấm huỷ thanh toán, bạn muốn chuyển sang ship COD không?
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <form th:action="@{/order/bank-transfer/cancel/switch-cod}" method="post">
+                <input type="hidden" name="orderId" th:value="${order.id}">
+                <button class="btn" type="submit">Có, chuyển sang COD</button>
+            </form>
+            <form th:action="@{/order/bank-transfer/cancel/delete}" method="post">
+                <input type="hidden" name="orderId" th:value="${order.id}">
+                <button class="btn btn-outline" type="submit">Không, tôi không muốn mua hàng nữa</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card" th:if="${showCancelPrompt == null or !showCancelPrompt}" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card" style="border: 1px dashed #93c5fd; background: #f8fafc;">
+            <div style="text-align: center; font-weight: 600;">Số tiền thanh toán:</div>
+            <div style="text-align: center; font-size: 22px; font-weight: 700;"
+                 th:text="${#numbers.formatDecimal(totalPrice, 0, 'POINT', 0, 'COMMA')} + 'đ'">0đ</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div style="font-weight: 600;">Quét mã QR để chuyển khoản</div>
+            <img th:if="${qrImageSrc}" th:src="${qrImageSrc}"
+                 alt="QR chuyển khoản" style="width: 260px; height: 260px; object-fit: contain;">
+            <div th:if="${qrImageSrc == null}" class="status-message">
+                Không thể tải mã QR, vui lòng dùng nút thanh toán PayOS bên dưới.
+            </div>
+        </div>
+
+        <details class="card" style="border: 1px solid #e6e6e6;">
+            <summary style="cursor: pointer; font-weight: 600;">Chi tiết thông tin chuyển khoản</summary>
+            <div style="margin-top: 12px; display: grid; gap: 8px;">
+                <div><strong>Ngân hàng:</strong> <span th:text="${bankName}">BIDV</span></div>
+                <div><strong>Số tài khoản:</strong> <span th:text="${accountNumber}">5800436728</span></div>
+                <div><strong>Thụ hưởng:</strong> <span th:text="${accountName}">TRAN VAN MINH</span></div>
+                <div><strong>Nội dung CK:</strong> <span th:text="${order.id}">1</span></div>
+                <div><strong>Số tiền:</strong>
+                    <span th:text="${#numbers.formatDecimal(totalPrice, 0, 'POINT', 0, 'COMMA')} + ' VNĐ'">0 VNĐ</span>
+                </div>
+            </div>
+        </details>
+
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <a class="btn" th:if="${checkoutUrl}" th:href="${checkoutUrl}" target="_blank" rel="noopener">Thanh toán qua PayOS</a>
+            <form th:action="@{/order/bank-transfer/confirm}" method="post">
+                <input type="hidden" name="orderId" th:value="${order.id}">
+                <button class="btn btn-outline" type="submit">Kiểm tra trạng thái</button>
+            </form>
+            <form th:action="@{/order/bank-transfer/cancel}" method="post">
+                <input type="hidden" name="orderId" th:value="${order.id}">
+                <button class="btn btn-outline" type="submit">Hủy thanh toán</button>
+            </form>
+        </div>
+    </div>
+</main>
+
+<div th:replace="layout/layout :: footer"></div>
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', () => {
+        const orderId = /*[[${order.id}]]*/ 0;
+        const hasCheckout = /*[[${checkoutUrl != null}]]*/ false;
+        const showCancelPrompt = /*[[${showCancelPrompt}]]*/ false;
+        if (!orderId || !hasCheckout || showCancelPrompt) {
+            return;
+        }
+        const poll = () => {
+            fetch(`/order/payos/status?orderId=${orderId}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(response => response.ok ? response.json() : null)
+                .then(data => {
+                    if (data && data.redirectUrl) {
+                        window.location.href = data.redirectUrl;
+                    }
+                })
+                .catch(() => {
+                });
+        };
+        poll();
+        setInterval(poll, 5000);
+    });
+</script>
+</body>
+</html>

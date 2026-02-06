@@ -30,7 +30,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductAController {
 
-    private static final int PAGE_SIZE = 10;
+    private static final int PAGE_SIZE = 5;
 
     private final ProductService productService;
     private final CategoryService categoryService;
@@ -38,8 +38,19 @@ public class ProductAController {
     private final ProductSizeService productSizeService;
 
     @GetMapping("/admin/product/index")
-    public String index(@RequestParam(value = "page", defaultValue = "0") int page, Model model) {
-        Page<Product> productsPage = productService.findAllPage(page, PAGE_SIZE);
+    public String index(@RequestParam(value = "page", defaultValue = "0") int page,
+                        @RequestParam(value = "keyword", required = false) String keyword,
+                        @RequestParam(value = "categoryId", required = false) String categoryId,
+                        @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
+                        @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
+                        Model model) {
+        boolean hasFilter = (keyword != null && !keyword.isBlank())
+                || (categoryId != null && !categoryId.isBlank())
+                || minPrice != null
+                || maxPrice != null;
+        Page<Product> productsPage = hasFilter
+                ? productService.searchWithFiltersPage(keyword, categoryId, minPrice, maxPrice, null, page, PAGE_SIZE)
+                : productService.findAllPage(page, PAGE_SIZE);
         model.addAttribute("products", productsPage.getContent());
         model.addAttribute("currentPage", productsPage.getNumber());
         model.addAttribute("totalPages", productsPage.getTotalPages());
@@ -47,6 +58,10 @@ public class ProductAController {
         model.addAttribute("sizes", sizeService.findAll());
         model.addAttribute("product", new Product());
         model.addAttribute("sizeQtyMap", Map.of());
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("selectedCategoryId", categoryId);
+        model.addAttribute("minPrice", minPrice);
+        model.addAttribute("maxPrice", maxPrice);
         return "admin/product";
     }
 
@@ -80,9 +95,19 @@ public class ProductAController {
     @GetMapping("/admin/product/edit/{id}")
     public String edit(@PathVariable("id") Integer id,
                        @RequestParam(value = "page", defaultValue = "0") int page,
+                       @RequestParam(value = "keyword", required = false) String keyword,
+                       @RequestParam(value = "categoryId", required = false) String categoryId,
+                       @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
+                       @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
                        Model model) {
         Optional<Product> product = productService.findByIdWithSizes(id);
-        Page<Product> productsPage = productService.findAllPage(page, PAGE_SIZE);
+        boolean hasFilter = (keyword != null && !keyword.isBlank())
+                || (categoryId != null && !categoryId.isBlank())
+                || minPrice != null
+                || maxPrice != null;
+        Page<Product> productsPage = hasFilter
+                ? productService.searchWithFiltersPage(keyword, categoryId, minPrice, maxPrice, null, page, PAGE_SIZE)
+                : productService.findAllPage(page, PAGE_SIZE);
         model.addAttribute("products", productsPage.getContent());
         model.addAttribute("currentPage", productsPage.getNumber());
         model.addAttribute("totalPages", productsPage.getTotalPages());
@@ -91,6 +116,10 @@ public class ProductAController {
         Product current = product.orElseGet(Product::new);
         model.addAttribute("product", current);
         model.addAttribute("sizeQtyMap", buildSizeQtyMap(current));
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("selectedCategoryId", categoryId);
+        model.addAttribute("minPrice", minPrice);
+        model.addAttribute("maxPrice", maxPrice);
         return "admin/product";
     }
 

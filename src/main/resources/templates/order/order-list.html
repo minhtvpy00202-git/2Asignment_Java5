@@ -34,9 +34,19 @@
                 <td th:text="${o.id}">1</td>
                 <td th:text="${o.createDate}">date</td>
                 <td>
-                    <span class="badge"
-                          th:text="${(o.status == 'NEW' or o.status == 'PLACED')} ? 'Đã đặt' : (${o.status == 'SHIPPING'} ? 'Đang giao' : (${o.status == 'DONE' or o.status == 'DELIVERED_SUCCESS'} ? 'Giao thành công' : (${o.status == 'CANCEL' or o.status == 'DELIVERY_FAILED'} ? 'Giao thất bại' : o.status)))">
-                        Đơn mới
+                    <span class="badge" th:switch="${o.status}">
+                        <span th:case="'PLACED_PAID'">Đã đặt - đã TT</span>
+                        <span th:case="'PLACED_UNPAID'">Đã đặt - chưa TT</span>
+                        <span th:case="'NEW'">Đã đặt - chưa TT</span>
+                        <span th:case="'PLACED'">Đã đặt - chưa TT</span>
+                        <span th:case="'SHIPPING_PAID'">Đang giao - đã TT</span>
+                        <span th:case="'SHIPPING_UNPAID'">Đang giao - chưa TT</span>
+                        <span th:case="'SHIPPING'">Đang giao - chưa TT</span>
+                        <span th:case="'DONE'">Giao thành công</span>
+                        <span th:case="'DELIVERED_SUCCESS'">Giao thành công</span>
+                        <span th:case="'CANCEL'">Giao thất bại</span>
+                        <span th:case="'DELIVERY_FAILED'">Giao thất bại</span>
+                        <span th:case="*" th:text="${o.status}">Đơn mới</span>
                     </span>
                 </td>
                 <td th:text="${o.address}">address</td>

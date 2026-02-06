@@ -65,6 +65,19 @@
             </select>
         </div>
         <div style="height: 320px; border-radius: 12px; overflow: hidden; border: 1px solid #e6e6e6;" id="checkoutMap"></div>
+        <div class="form-group" style="margin-top: 12px;">
+            <label>Hình thức thanh toán</label>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
+                    <input type="radio" name="paymentMethod" value="BANK" required style="width: auto; margin: 0;">
+                    Chuyển khoản ngân hàng
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
+                    <input type="radio" name="paymentMethod" value="COD" checked required style="width: auto; margin: 0;">
+                    Thanh toán bằng tiền mặt khi nhận hàng (COD)
+                </label>
+            </div>
+        </div>
         <button class="btn" type="submit">Đặt hàng ngay</button>
     </form>
 </main>

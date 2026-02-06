@@ -26,3 +26,8 @@ server:
     max-parameter-count: 10000
 camera:
   hls-url: http://10.86.42.36:8888/camera/index.m3u8
+payos:
+  client-id: ${PAYOS_CLIENT_ID}
+  api-key: ${PAYOS_API_KEY}
+  checksum-key: ${PAYOS_CHECKSUM_KEY}
+
