@@ -12,13 +12,13 @@
     <link rel="stylesheet" th:href="@{/css/components.css}">
     <link rel="stylesheet" th:href="@{/css/pages.css}">
 </head>
-<body>
+<body class="admin-product-body">
 <div th:replace="layout/layout :: header"></div>
 
 <main class="container admin-product-page" style="padding: 16px;">
     <h3 class="page-title">Quản lý sản phẩm</h3>
     <div class="admin-product-shell">
-        <div class="admin-product-sidebar">
+        <div class="admin-product-menu">
             <nav class="admin-nav admin-product-nav">
                 <a th:href="@{/admin/category/index}">Danh mục</a>
                 <a th:href="@{/admin/product/index}">Sản phẩm</a>
@@ -29,61 +29,36 @@
                 <a th:href="@{/admin/report/vip}">Khách hàng VIP</a>
             </nav>
 
-            <form class="card admin-product-filter" th:action="@{/admin/product/index}" method="get">
-                <div class="form-group">
-                    <label>Từ khoá</label>
-                    <input type="text" name="keyword" th:value="${keyword}">
-                </div>
-                <div class="form-group">
-                    <label>Thể loại</label>
-                    <select name="categoryId">
-                        <option value="">Tất cả</option>
-                        <option th:each="c : ${categories}"
-                                th:value="${c.id}"
-                                th:text="${c.name}"
-                                th:selected="${selectedCategoryId != null and selectedCategoryId == c.id}">
-                        </option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Giá từ</label>
-                    <input type="number" step="0.01" name="minPrice" th:value="${minPrice}">
-                </div>
-                <div class="form-group">
-                    <label>Giá đến</label>
-                    <input type="number" step="0.01" name="maxPrice" th:value="${maxPrice}">
-                </div>
-                <div class="table-actions">
-                    <button class="btn" type="submit">Lọc</button>
-                    <a class="btn btn-outline" th:href="@{/admin/product/index}">Xoá lọc</a>
-                </div>
-            </form>
         </div>
 
         <div class="admin-product-main">
             <div class="card admin-product-list">
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <div class="admin-product-list-header">
                     <h4>Danh sách</h4>
-                    <button id="openProductModalBtn" class="btn" type="button">Thêm / Sửa</button>
+                    <button id="openProductModalBtn" class="btn" type="button">Thêm</button>
                 </div>
                 <table>
                     <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>Ảnh</th>
                         <th>Tên</th>
-                        <th>Giá</th>
+                        <th>Giá (VND)</th>
                         <th></th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr th:each="p : ${products}">
-                        <td th:text="${p.id}">1</td>
+                        <td class="product-image-cell">
+                            <img class="product-thumb"
+                                 th:src="${#strings.isEmpty(p.image)} ? @{/images/product1.jpg} : @{|/images/${p.image}|}"
+                                 alt="Ảnh sản phẩm">
+                        </td>
                         <td th:text="${p.name}">Tên</td>
-                        <td th:text="${#numbers.formatDecimal(p.price, 0, 'POINT', 0, 'COMMA')} + ' VNĐ'">0</td>
+                        <td th:text="${#numbers.formatDecimal(p.price, 0, 'POINT', 0, 'COMMA')}">0</td>
                         <td class="table-actions">
-                            <a class="btn btn-outline"
+                            <a class="btn btn-action-outline"
                                th:href="@{/admin/product/edit/{id}(id=${p.id},page=${currentPage},keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}">Sửa</a>
-                            <a class="btn btn-outline"
+                            <a class="btn btn-action-solid"
                                th:href="@{/admin/product/delete/{id}(id=${p.id},page=${currentPage},keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}"
                                onclick="return confirm('Bạn có chắc chắn muốn xoá mục này không?')">Xoá</a>
                         </td>
@@ -117,7 +92,38 @@
                    th:href="@{/admin/product/index(page=${totalPages - 1},keyword=${keyword},categoryId=${selectedCategoryId},minPrice=${minPrice},maxPrice=${maxPrice})}"
                    th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">Last</a>
             </div>
+        </div>
 
+        <div class="admin-product-filter">
+            <form class="card admin-product-filter-form" th:action="@{/admin/product/index}" method="get">
+                <div class="form-group">
+                    <label>Từ khoá</label>
+                    <input type="text" name="keyword" th:value="${keyword}">
+                </div>
+                <div class="form-group">
+                    <label>Thể loại</label>
+                    <select name="categoryId">
+                        <option value="">Tất cả</option>
+                        <option th:each="c : ${categories}"
+                                th:value="${c.id}"
+                                th:text="${c.name}"
+                                th:selected="${selectedCategoryId != null and selectedCategoryId == c.id}">
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Giá từ</label>
+                    <input type="number" step="0.01" name="minPrice" th:value="${minPrice}">
+                </div>
+                <div class="form-group">
+                    <label>Giá đến</label>
+                    <input type="number" step="0.01" name="maxPrice" th:value="${maxPrice}">
+                </div>
+                <div class="table-actions">
+                    <button class="btn" type="submit">Lọc</button>
+                    <a class="btn btn-outline" th:href="@{/admin/product/index}">Xoá lọc</a>
+                </div>
+            </form>
         </div>
     </div>
 </main>

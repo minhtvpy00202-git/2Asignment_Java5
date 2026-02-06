@@ -466,12 +466,12 @@ main.container.admin-product-page {
 
 .admin-product-shell {
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr);
-    gap: 18px;
+    grid-template-columns: minmax(200px, 230px) minmax(0, 1fr) minmax(220px, 280px);
+    gap: 14px;
     align-items: start;
 }
 
-.admin-product-sidebar {
+.admin-product-menu {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -482,6 +482,88 @@ main.container.admin-product-page {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+.admin-product-filter {
+    min-width: 0;
+}
+
+.admin-product-filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.admin-product-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.admin-product-list-header .btn {
+    margin-right: 8px;
+}
+
+.admin-product-list .table-actions {
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.admin-product-list .btn-action-outline {
+    background: #ffffff;
+    color: #111111;
+    border: 1px solid #111111;
+}
+
+.admin-product-list .btn-action-outline:hover {
+    background: #111111;
+    color: #ffffff;
+    border-color: #ffffff;
+}
+
+.admin-product-list .btn-action-solid {
+    background: #111111;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+}
+
+.admin-product-list .btn-action-solid:hover {
+    background: #ffffff;
+    color: #111111;
+    border-color: #111111;
+}
+
+.admin-product-list .product-image-cell {
+    width: 72px;
+}
+
+.admin-product-list .product-thumb {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    display: block;
+    margin: 0 auto;
+}
+
+.admin-product-filter-form .table-actions {
+    width: 100%;
+    justify-content: center;
+}
+
+.admin-product-body .site-footer .footer-inner {
+    max-width: 100%;
+    width: 100%;
+}
+
+.admin-product-body .site-footer .container {
+    max-width: 100%;
+    width: 100%;
+    padding-left: 18px;
+    padding-right: 18px;
 }
 
 .admin-form-grid {
@@ -563,8 +645,19 @@ main.container.admin-product-page {
         grid-template-columns: 1fr;
     }
 
+    .admin-product-filter {
+        order: 3;
+    }
+
     .admin-form-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1200px) {
+    .admin-product-shell {
+        grid-template-columns: minmax(190px, 210px) minmax(0, 1fr) minmax(210px, 240px);
+        gap: 12px;
     }
 }
 
